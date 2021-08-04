@@ -9,6 +9,7 @@ project(taco
   VERSION 0.1
   LANGUAGES C CXX
 )
+include(GNUInstallDirs)
 option(CUDA "Build for NVIDIA GPU (CUDA must be preinstalled)" OFF)
 option(PYTHON "Build TACO for python environment" OFF)
 option(COVERAGE "Build with code coverage analysis" OFF)
@@ -73,10 +74,6 @@ set(BUILD_SHARED_LIBS ON)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-
 set(OPTIMIZE "-O3" CACHE STRING "Optimization level")
 set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
 
@@ -119,7 +116,6 @@ enable_testing()
 
 set(TACO_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
-install(DIRECTORY ${TACO_INCLUDE_DIR}/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 add_subdirectory(src)
 add_subdirectory(test)
@@ -190,5 +186,4 @@ if(COVERAGE)
 endif(COVERAGE)
 
 string(TIMESTAMP TACO_BUILD_DATE "%Y-%m-%d")
-configure_file("include/taco/version.h.in" "include/taco/version.h" @ONLY)
-install(FILES "${CMAKE_BINARY_DIR}/include/taco/version.h" DESTINATION "include/taco")
+
