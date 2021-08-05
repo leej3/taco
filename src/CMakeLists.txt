@@ -1,18 +1,11 @@
-# Add an interface library for miscellaneous headers
-add_library(libheaders INTERFACE)
 # Add version header:
 configure_file(
   "${PROJECT_SOURCE_DIR}/include/taco/version.h.in"
   "${PROJECT_BINARY_DIR}/include/taco/version.h"
   @ONLY
 )
-target_sources(libheaders PUBLIC ${PROJECT_BINARY_DIR}/include/taco/version.h)
 
-target_include_directories(
-  libheaders
-  INTERFACE ${PROJECT_BINARY_DIR}/include
-)
-
+# Add taco library
 add_library(taco)
 target_sources(
   taco
@@ -53,14 +46,13 @@ target_include_directories(
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/taco>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}/taco>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/taco>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
 )
 target_link_libraries(taco
-  PUBLIC
-    libheaders
   PRIVATE
     $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
 )
@@ -72,7 +64,7 @@ target_compile_definitions(taco
 set_target_properties(
   taco
   PROPERTIES PUBLIC_HEADER
-    $<TARGET_PROPERTY:libheaders,INTERFACE_SOURCES>
+    ${PROJECT_BINARY_DIR}/include/taco/version.h
 )
 
 # add alias for namespaced target to allow downstreams to use targets provided
@@ -91,7 +83,7 @@ install(
 )
 # Install headers for taco
 install(
-  DIRECTORY ${PROJECT_SOURCE_DIR}/include
+  DIRECTORY ${PROJECT_SOURCE_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   FILES_MATCHING PATTERN "*.h"
 )
