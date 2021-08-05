@@ -27,7 +27,7 @@ if(PYTHON)
   set(TACO_FEATURE_PYTHON 1)
 endif(PYTHON)
 
-SET(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
+set(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
@@ -187,3 +187,32 @@ endif(COVERAGE)
 
 string(TIMESTAMP TACO_BUILD_DATE "%Y-%m-%d")
 
+
+include(CMakePackageConfigHelpers)
+set(CONFIG_SETUP_DIR ${CMAKE_CURRENT_BINARY_DIR}/taco)
+set(ConfigPackageLocation share/cmake/taco)
+
+write_basic_package_version_file(
+      ${CONFIG_SETUP_DIR}/tacoConfigVersion.cmake
+      VERSION 0.1
+      COMPATIBILITY AnyNewerVersion
+)
+
+configure_file(cmake/tacoConfig.cmake
+      ${CONFIG_SETUP_DIR}/tacoConfig.cmake
+      COPYONLY
+)
+
+install(EXPORT tacoExports
+      FILE tacoTargets.cmake
+      NAMESPACE     taco::
+      DESTINATION   ${ConfigPackageLocation}
+      COMPONENT     Development
+)
+
+install(FILES
+         ${CONFIG_SETUP_DIR}/tacoConfig.cmake
+         ${CONFIG_SETUP_DIR}/tacoConfigVersion.cmake
+      COMPONENT     Development
+      DESTINATION   ${ConfigPackageLocation}
+)

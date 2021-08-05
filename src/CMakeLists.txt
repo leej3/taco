@@ -85,6 +85,7 @@ add_library(taco::taco ALIAS taco)
 # of the include directory in the project source.
 install(
   TARGETS taco
+  EXPORT tacoExports
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/taco
 )
