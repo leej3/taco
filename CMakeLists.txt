@@ -9,12 +9,11 @@ project(taco
   VERSION 0.1
   LANGUAGES C CXX
 )
+include(GNUInstallDirs)
 option(CUDA "Build for NVIDIA GPU (CUDA must be preinstalled)" OFF)
 option(PYTHON "Build TACO for python environment" OFF)
-option(OPENMP "Build with OpenMP execution support" OFF)
 option(COVERAGE "Build with code coverage analysis" OFF)
 set(TACO_FEATURE_CUDA 0)
-set(TACO_FEATURE_OPENMP 0)
 set(TACO_FEATURE_PYTHON 0)
 if(CUDA)
   message("-- Searching for CUDA Installation")
@@ -22,12 +21,6 @@ if(CUDA)
   add_definitions(-DCUDA_BUILT)
   set(TACO_FEATURE_CUDA 1)
 endif(CUDA)
-if(OPENMP)
-  message("-- Will use OpenMP for parallel execution")
-  add_definitions(-DUSE_OPENMP)
-  set(TACO_FEATURE_OPENMP 1)
-endif(OPENMP)
-
 if(PYTHON)
   message("-- Will build Python extension")
   add_definitions(-DPYTHON)
@@ -74,19 +67,37 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(CMAKE_MACOSX_RPATH 1)
 endif()
 
+# Keep TACO_SHARED_LIBRARY for backwards compatibility
 option(TACO_SHARED_LIBRARY "Build as a shared library" ON)
+# Use cmake internal variables to drive shared/static build
+set(BUILD_SHARED_LIBS ON)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-
 set(OPTIMIZE "-O3" CACHE STRING "Optimization level")
 set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
-if(OPENMP)
-  set(C_CXX_FLAGS "-fopenmp ${C_CXX_FLAGS}")
-endif(OPENMP)
+
+# Determine whether openmp parallelism should be used.
+if(NOT DEFINED OPENMP OR OPENMP)
+  find_package(OpenMP COMPONENTS CXX)
+  # By default OPENMP will be set based on whether omp is found.
+  if(OpenMP_FOUND)
+    set(OPENMP ON)
+    set(TACO_FEATURE_OPENMP 1)
+  else()
+    set(OPENMP OFF)
+    set(TACO_FEATURE_OPENMP 0)
+  endif()
+endif()
+# Fail if OPENMP has been explicitly set and OMP was not found
+if(OPENMP AND NOT OpenMP_FOUND)
+  message(FATAL_ERROR "
+  OMP was not found. There are various solutions: do not set OPENMP=ON, add
+  your compiler's lib directory to LDFLAGS, check that you have libomp or
+  similar appropriate library installed."
+  )
+endif()
+
 
 if(COVERAGE)
   find_program(PATH_TO_GCOVR gcovr REQUIRED)
@@ -101,19 +112,10 @@ set(C_CXX_FLAGS "${C_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "${C_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${C_CXX_FLAGS} -std=c++14")
 
-set(TACO_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR})
-
-set(TACO_SRC_DIR     ${TACO_PROJECT_DIR}/src)
-set(TACO_TEST_DIR    ${TACO_PROJECT_DIR}/test)
-set(TACO_TOOLS_DIR   ${TACO_PROJECT_DIR}/tools)
-set(TACO_INCLUDE_DIR ${TACO_PROJECT_DIR}/include)
-
 enable_testing()
-include_directories(${TACO_INCLUDE_DIR})
 
 set(TACO_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
-install(DIRECTORY ${TACO_INCLUDE_DIR}/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 add_subdirectory(src)
 add_subdirectory(test)
@@ -122,7 +124,7 @@ add_subdirectory(apps)
 string(REPLACE " -Wmissing-declarations" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 find_package(Git QUIET)
-if(GIT_FOUND AND EXISTS "${TACO_PROJECT_DIR}/.git")
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
   # Update submodules as needed
   option(GIT_SUBMODULE "Check submodules during build" ON)
   if(GIT_SUBMODULE)
@@ -150,7 +152,7 @@ else()
   set(TACO_GIT_SHORTHASH "")
 endif()
 
-if(NOT EXISTS "${TACO_PROJECT_DIR}/python_bindings/pybind11/CMakeLists.txt")
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/python_bindings/pybind11/CMakeLists.txt")
   message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
@@ -184,8 +186,6 @@ if(COVERAGE)
 endif(COVERAGE)
 
 string(TIMESTAMP TACO_BUILD_DATE "%Y-%m-%d")
-configure_file("include/taco/version.h.in" "include/taco/version.h" @ONLY)
-install(FILES "${CMAKE_BINARY_DIR}/include/taco/version.h" DESTINATION "include/taco")
 
 
 include(CMakePackageConfigHelpers)
